@@ -49,11 +49,13 @@ uv run python download_s1_aux.py /path/to/S1_SCENE.SAFE.zip \
 
 Useful options:
 
-- `--orbit-dir`, `--orbit-output`: directory for downloaded orbit `.EOF` files. Defaults to the current directory.
-- `--dem-dir`, `--dem-output`: directory for downloaded Copernicus DEM `.tif` files. Defaults to the current directory.
+- `--orbit-dir`, `--orbit-output`: directory for downloaded orbit `.EOF` files. Omit to skip orbit downloads.
+- `--dem-dir`, `--dem-output`: directory for downloaded Copernicus DEM `.tif` files. Omit to skip DEM downloads.
 - `--orbit-type precise|restituted`: orbit type to request. Default is `precise`; precise orbit lookup can fall back to restituted orbits.
 - `--no-force-asf`: try Copernicus Data Space first for orbit files instead of going directly to ASF.
 - `--force-dem`: redownload DEM tiles even when non-empty files already exist.
+
+For DEM-only downloads, pass only `--dem-dir`. For orbit-only downloads, pass only `--orbit-dir`. Use `.` to save to the current directory. If neither is supplied, nothing is downloaded.
 
 ## Data Sources
 

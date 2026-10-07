@@ -36,16 +36,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--orbit-output",
         dest="orbit_dir",
         type=Path,
-        default=Path("."),
-        help="Directory for downloaded orbit .EOF files. Defaults to current directory.",
+        help="Directory for downloaded orbit .EOF files. Omit to skip orbit downloads.",
     )
     parser.add_argument(
         "--dem-dir",
         "--dem-output",
         dest="dem_dir",
         type=Path,
-        default=Path("."),
-        help="Directory for downloaded Copernicus DEM .tif files. Defaults to current directory.",
+        help="Directory for downloaded Copernicus DEM .tif files. Omit to skip DEM downloads.",
     )
     parser.add_argument(
         "--orbit-type",
@@ -233,6 +231,9 @@ def download_dem_tiles(tiles: Iterable[str], dem_dir: Path, force: bool = False)
         try:
             download_url(url, destination)
         except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                print(f"Warning: DEM tile not published, skipping: {tile}", file=sys.stderr)
+                continue
             raise RuntimeError(f"Failed to download {tile} from {url}: HTTP {exc.code}") from exc
         downloaded.append(destination)
 
@@ -259,31 +260,34 @@ def download_orbit(
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     scene = args.scene.expanduser().resolve()
-    orbit_dir = args.orbit_dir.expanduser().resolve()
-    dem_dir = args.dem_dir.expanduser().resolve()
 
     if not scene.exists():
         print(f"Scene does not exist: {scene}", file=sys.stderr)
         return 2
 
     print(f"Scene: {scene}")
-    print(f"Orbit output: {orbit_dir}")
-    orbit_files = download_orbit(scene, orbit_dir, args.orbit_type, args.force_asf)
+    if args.orbit_dir is not None:
+        orbit_dir = args.orbit_dir.expanduser().resolve()
+        print(f"Orbit output: {orbit_dir}")
+        orbit_files = download_orbit(scene, orbit_dir, args.orbit_type, args.force_asf)
+        print("Downloaded/available orbit files:")
+        for path in orbit_files:
+            print(f"  {path}")
 
-    print(f"DEM output: {dem_dir}")
-    dem_tiles = dem_tiles_for_scene(scene)
-    print("DEM tiles:")
-    for tile in dem_tiles:
-        print(f"  {tile}")
-    dem_files = download_dem_tiles(dem_tiles, dem_dir, force=args.force_dem)
+    if args.dem_dir is not None:
+        dem_dir = args.dem_dir.expanduser().resolve()
+        print(f"DEM output: {dem_dir}")
+        dem_tiles = dem_tiles_for_scene(scene)
+        print("DEM tiles:")
+        for tile in dem_tiles:
+            print(f"  {tile}")
+        dem_files = download_dem_tiles(dem_tiles, dem_dir, force=args.force_dem)
+        print("Downloaded/available DEM files:")
+        for path in dem_files:
+            print(f"  {path}")
 
-    print("Downloaded/available orbit files:")
-    for path in orbit_files:
-        print(f"  {path}")
-
-    print("Downloaded/available DEM files:")
-    for path in dem_files:
-        print(f"  {path}")
+    if args.orbit_dir is None and args.dem_dir is None:
+        print("No output directories specified; nothing to download.")
 
     return 0
 
